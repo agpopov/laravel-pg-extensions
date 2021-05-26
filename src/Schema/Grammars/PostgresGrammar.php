@@ -115,4 +115,9 @@ class PostgresGrammar extends BasePostgresGrammar
     {
         return TsRangeType::TYPE_NAME;
     }
+    
+    public function getFluentCommands(): array
+    {
+        return ['Immutable'];
+    }
 }

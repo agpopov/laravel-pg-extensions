@@ -1,5 +1,5 @@
 {
-  "name": "umbrellio/laravel-pg-extensions",
+  "name": "agpopov/laravel-pg-extensions",
   "type": "library",
   "description": "Extensions for Postgres Laravel",
   "minimum-stability": "stable",
@@ -22,6 +22,10 @@
     {
       "name": "Korben Dallas",
       "email": "pvsaintpe@umbrellio.biz"
+    },
+    {
+      "name": "Alexander Popov",
+      "email": "alexander.popov.gg@gmail.com"
     }
   ],
   "suggest": {
@@ -29,8 +33,8 @@
     "umbrellio/laravel-common-objects": "Package with helpers for common Laravel components"
   },
   "support": {
-    "issues": "https://github.com/umbrellio/laravel-pg-extensions/issues",
-    "source": "https://github.com/umbrellio/laravel-pg-extensions"
+    "issues": "https://github.com/agpopov/laravel-pg-extensions/issues",
+    "source": "https://github.com/agpopov/laravel-pg-extensions"
   },
   "require": {
     "php": "^7.2|^7.3|^7.4|^8.0",
