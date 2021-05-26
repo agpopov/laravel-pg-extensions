@@ -118,6 +118,11 @@ class PostgresGrammar extends BasePostgresGrammar
     
     public function getFluentCommands(): array
     {
-        return ['Immutable'];
+        try{
+            $fluentCommands = $this->__call('getExtraFluentCommands', []);
+        } catch (\BadMethodCallException) {
+            $fluentCommands = [];
+        }
+        return array_merge(parent::getFluentCommands(), $fluentCommands);
     }
 }
