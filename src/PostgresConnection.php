@@ -48,7 +48,7 @@ class PostgresConnection extends BasePostgresConnection
         self::$extensions[$extension::getName()] = $extension;
     }
 
-    public function getSchemaBuilder()
+    public function getSchemaBuilder(): Builder
     {
         if ($this->schemaGrammar === null) {
             $this->useDefaultSchemaGrammar();
