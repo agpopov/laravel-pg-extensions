@@ -18,15 +18,23 @@ namespace Illuminate\Database\Schema {
      * @method void detachPartition(string $partition)
      * @method LikeDefinition like(string $table)
      * @method Fluent ifNotExists()
+     * @method Fluent watchUpdate()
+     * @method Fluent watchInsert()
+     * @method Fluent watchDelete()
+     * @method void addWatchColumns(bool $areUserColumnsRequired = true)
+     * @method void addSoftDeleteColumns()
      * @method UniqueDefinition uniquePartial($columns, ?string $index = null, ?string $algorithm = null)
      * @method ViewDefinition createView(string $view, string $select, bool $materialize = false)
      * @method Fluent dropView(string $view)
      * @method ColumnDefinition numeric(string $column, ?int $precision = null, ?int $scale = null)
      * @method ColumnDefinition tsrange(string $column)
+     * @method ColumnDefinition array(string $column, string $type)
      * @method ExcludeDefinition exclude($columns, ?string $index = null)
      * @method CheckDefinition check($columns, ?string $index = null)
      * @method string getTable()
      * @method ColumnDefinition|Fluent addColumn($type, $name, array $parameters = [])
+     * @method ColumnDefinition primaryUuid(string $column)
+     * @method Fluent immutable(string $column)
      *
      * @property bool $temporary
      */
@@ -50,8 +58,16 @@ namespace Illuminate\Database\Schema {
 
     /**
      * @method ColumnDefinition using($expression)
+     * @method ColumnDefinition immutable()
      */
     class ColumnDefinition extends Fluent
+    {
+    }
+
+    /**
+     * @method ForeignKeyDefinition touchParent()
+     */
+    class ForeignKeyDefinition extends Fluent
     {
     }
 }

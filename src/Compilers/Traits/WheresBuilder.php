@@ -88,7 +88,7 @@ trait WheresBuilder
         })->toArray();
     }
 
-    protected static function wrapValue($value)
+    protected static function wrapValue($value): int|string
     {
         if (is_string($value)) {
             return "'{$value}'";

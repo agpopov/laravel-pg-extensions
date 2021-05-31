@@ -11,27 +11,39 @@ use Umbrellio\Postgres\Compilers\AttachPartitionCompiler;
 use Umbrellio\Postgres\Compilers\CheckCompiler;
 use Umbrellio\Postgres\Compilers\CreateCompiler;
 use Umbrellio\Postgres\Compilers\ExcludeCompiler;
+use Umbrellio\Postgres\Compilers\FunctionsCompiler;
+use Umbrellio\Postgres\Compilers\ImmutableCompiler;
+use Umbrellio\Postgres\Compilers\TouchCompiler;
 use Umbrellio\Postgres\Compilers\UniqueCompiler;
+use Umbrellio\Postgres\Compilers\WatchCompiler;
 use Umbrellio\Postgres\Schema\Builders\Constraints\Check\CheckBuilder;
 use Umbrellio\Postgres\Schema\Builders\Constraints\Exclude\ExcludeBuilder;
 use Umbrellio\Postgres\Schema\Builders\Indexes\Unique\UniqueBuilder;
 use Umbrellio\Postgres\Schema\Builders\Indexes\Unique\UniquePartialBuilder;
+use Umbrellio\Postgres\Schema\Types\ArrayType;
 use Umbrellio\Postgres\Schema\Types\NumericType;
 use Umbrellio\Postgres\Schema\Types\TsRangeType;
 
 class PostgresGrammar extends BasePostgresGrammar
 {
-    public function compileCreate(Blueprint $blueprint, Fluent $command): string
+    public function compileCreate(Blueprint $blueprint, Fluent $command): array
     {
         $like = $this->getCommandByName($blueprint, 'like');
         $ifNotExists = $this->getCommandByName($blueprint, 'ifNotExists');
+        $onUpdate = $this->getCommandByName($blueprint, 'watchUpdate');
+        $onInsert = $this->getCommandByName($blueprint, 'watchInsert');
+        $onDelete = $this->getCommandByName($blueprint, 'watchDelete');
 
-        return CreateCompiler::compile(
+        $create = CreateCompiler::compile(
             $this,
             $blueprint,
             $this->getColumns($blueprint),
             compact('like', 'ifNotExists')
         );
+
+        $watch = WatchCompiler::compile($this, $blueprint, $command, compact('onUpdate', 'onInsert', 'onDelete'));
+
+        return array_merge([$create], $watch);
     }
 
     public function compileAttachPartition(Blueprint $blueprint, Fluent $command): string
@@ -41,7 +53,8 @@ class PostgresGrammar extends BasePostgresGrammar
 
     public function compileDetachPartition(Blueprint $blueprint, Fluent $command): string
     {
-        return sprintf('alter table %s detach partition %s',
+        return sprintf(
+            'alter table %s detach partition %s',
             $this->wrapTable($blueprint),
             $command->get('partition')
         );
@@ -50,14 +63,19 @@ class PostgresGrammar extends BasePostgresGrammar
     public function compileCreateView(/** @scrutinizer ignore-unused */ Blueprint $blueprint, Fluent $command): string
     {
         $materialize = $command->get('materialize') ? 'materialized' : '';
-        return implode(' ', array_filter([
-            'create',
-            $materialize,
-            'view',
-            $this->wrapTable($command->get('view')),
-            'as',
-            $command->get('select'),
-        ]));
+        return implode(
+            ' ',
+            array_filter(
+                [
+                    'create',
+                    $materialize,
+                    'view',
+                    $this->wrapTable($command->get('view')),
+                    'as',
+                    $command->get('select'),
+                ]
+            )
+        );
     }
 
     public function compileDropView(/** @scrutinizer ignore-unused */ Blueprint $blueprint, Fluent $command): string
@@ -94,6 +112,45 @@ class PostgresGrammar extends BasePostgresGrammar
         return CheckCompiler::compile($this, $blueprint, $command);
     }
 
+    public function compileImmutable(Blueprint $blueprint, Fluent $command): array
+    {
+        return ImmutableCompiler::compile($this, $blueprint, $command);
+    }
+
+    public function compileDropImmutable(Blueprint $blueprint, Fluent $command): array
+    {
+        return ImmutableCompiler::drop($this, $blueprint, $command);
+    }
+
+    public function compileCreateJsonToArrayFunction(Blueprint $blueprint, Fluent $command): ?string
+    {
+        return FunctionsCompiler::compile('jsonToArrayFunction');
+    }
+
+    public function compileAddUuidExtension(Blueprint $blueprint, Fluent $command): ?string
+    {
+        return FunctionsCompiler::compile('uuidExtension');
+    }
+
+    public function compileForeign(Blueprint $blueprint, Fluent $command): array|string
+    {
+        $sql = parent::compileForeign($blueprint, $command);
+
+        if ($command->touchParent) {
+            $commands = TouchCompiler::compile($this, $blueprint, $command);
+            return array_merge([$sql], $commands);
+        }
+
+        return $sql;
+    }
+
+    public function typeArray(Fluent $column): string
+    {
+        $arrayType = $column->get('arrayType');
+
+        return "$arrayType " . ArrayType::TYPE_NAME;
+    }
+
     protected function typeNumeric(Fluent $column): string
     {
         $type = NumericType::TYPE_NAME;
@@ -115,14 +172,10 @@ class PostgresGrammar extends BasePostgresGrammar
     {
         return TsRangeType::TYPE_NAME;
     }
-    
+
     public function getFluentCommands(): array
     {
-        try{
-            $fluentCommands = $this->__call('getExtraFluentCommands', []);
-        } catch (\BadMethodCallException) {
-            $fluentCommands = [];
-        }
+        $fluentCommands = ['Immutable', 'Touch'];
         return array_merge(parent::getFluentCommands(), $fluentCommands);
     }
 }

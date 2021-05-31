@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Umbrellio\Postgres\Schema;
 
+use DB;
+use Doctrine\DBAL\Schema\AbstractSchemaManager;
 use Illuminate\Database\Schema\Blueprint as BaseBlueprint;
 use Illuminate\Database\Schema\ColumnDefinition;
 use Illuminate\Support\Facades\Schema;
@@ -14,6 +16,7 @@ use Umbrellio\Postgres\Schema\Builders\Indexes\Unique\UniqueBuilder;
 use Umbrellio\Postgres\Schema\Definitions\AttachPartitionDefinition;
 use Umbrellio\Postgres\Schema\Definitions\CheckDefinition;
 use Umbrellio\Postgres\Schema\Definitions\ExcludeDefinition;
+use Umbrellio\Postgres\Schema\Definitions\ForeignKeyDefinition;
 use Umbrellio\Postgres\Schema\Definitions\LikeDefinition;
 use Umbrellio\Postgres\Schema\Definitions\UniqueDefinition;
 use Umbrellio\Postgres\Schema\Definitions\ViewDefinition;
@@ -48,13 +51,95 @@ class Blueprint extends BaseBlueprint
         return $this->addCommand('ifNotExists');
     }
 
+    private function filterExistingColumns(array &$columns): void
+    {
+        foreach ($this->getColumns() as $column) {
+            if (array_key_exists($name = $column->get('name'), $columns)) {
+                $columns[$name] = false;
+            }
+        }
+
+        if (in_array(true, $columns)) {
+            foreach (Schema::getColumnListing($this->getTable()) as $column) {
+                if (array_key_exists($column, $columns)) {
+                    $columns[$column] = false;
+                }
+            }
+        }
+    }
+
+    public function addWatchColumns(bool $areUserColumnsRequired = true): void
+    {
+        $columns = [
+            'created_at' => true,
+            'updated_at' => true,
+            'created_by' => true,
+            'updated_by' => true,
+        ];
+        $this->filterExistingColumns($columns);
+
+        if ($columns['created_at']) {
+            $this->timestamp('created_at')->useCurrent();
+        }
+        if ($columns['updated_at']) {
+            $this->timestamp('updated_at')->useCurrent();
+        }
+        if ($columns['created_by']) {
+            $column = $this->uuid('created_by');
+            if (! $areUserColumnsRequired) {
+                $column->nullable();
+            }
+        }
+        if ($columns['updated_by']) {
+            $column = $this->uuid('updated_by');
+            if (! $areUserColumnsRequired) {
+                $column->nullable();
+            }
+        }
+    }
+
+    public function addSoftDeleteColumns(): void
+    {
+        $columns = [
+            'deleted_at' => true,
+            'deleted_by' => true
+        ];
+        $this->filterExistingColumns($columns);
+
+        if ($columns['deleted_at']) {
+            $this->timestamp('deleted_at')->nullable();
+        }
+        if ($columns['deleted_by']) {
+            $this->uuid('deleted_by')->nullable();
+        }
+    }
+
+    public function watchUpdate(): Fluent
+    {
+        $this->addWatchColumns();
+        return $this->addCommand('watchUpdate');
+    }
+
+    public function watchInsert(): Fluent
+    {
+        $this->addWatchColumns();
+        return $this->addCommand('watchInsert');
+    }
+
+    public function watchDelete(): Fluent
+    {
+        $this->addSoftDeleteColumns();
+        return $this->addCommand('watchDelete');
+    }
+
     /**
      * @param array|string $columns
+     *
      * @return UniqueDefinition|UniqueBuilder
      */
     public function uniquePartial($columns, ?string $index = null, ?string $algorithm = null): Fluent
     {
-        $columns = (array) $columns;
+        $columns = (array)$columns;
 
         $index = $index ?: $this->createIndexName('unique', $columns);
 
@@ -72,11 +157,12 @@ class Blueprint extends BaseBlueprint
 
     /**
      * @param array|string $columns
+     *
      * @return ExcludeDefinition|ExcludeBuilder
      */
     public function exclude($columns, ?string $index = null): Fluent
     {
-        $columns = (array) $columns;
+        $columns = (array)$columns;
 
         $index = $index ?: $this->createIndexName('excl', $columns);
 
@@ -85,11 +171,12 @@ class Blueprint extends BaseBlueprint
 
     /**
      * @param array|string $columns
+     *
      * @return CheckDefinition|CheckBuilder
      */
     public function check($columns, ?string $index = null): Fluent
     {
-        $columns = (array) $columns;
+        $columns = (array)$columns;
 
         $index = $index ?: $this->createIndexName('chk', $columns);
 
@@ -146,7 +233,35 @@ class Blueprint extends BaseBlueprint
         return $this->addColumn('tsrange', $column);
     }
 
-    protected function getSchemaManager()
+    /**
+     * @return Fluent|ColumnDefinition
+     */
+    public function array(string $column, string $type): Fluent
+    {
+        $this->addCommand('createJsonToArrayFunction');
+        return $this->addColumn('array', $column, ['arrayType' => $type]);
+    }
+
+    /**
+     * @return Fluent|ColumnDefinition
+     */
+    public function primaryUuid(string $column): Fluent
+    {
+        $this->addCommand('addUuidExtension');
+        return $this->uuid($column)->primary()->default(DB::raw('uuid_generate_v4()'));
+    }
+
+    public function immutable(string $column): Fluent
+    {
+        return $this->addCommand('immutable', compact('column'));
+    }
+
+    public function dropImmutable(string $column): Fluent
+    {
+        return $this->addCommand('dropImmutable', compact('column'));
+    }
+
+    protected function getSchemaManager(): AbstractSchemaManager
     {
         return Schema::getConnection()->getDoctrineSchemaManager();
     }
