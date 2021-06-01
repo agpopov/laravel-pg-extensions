@@ -15,7 +15,7 @@ This project extends Laravel's database layer to allow use specific Postgres fea
 
 Run this command to install:
 ```bash
-composer require umbrellio/laravel-pg-extensions
+composer require agpopov/laravel-pg-extensions
 ```
 
 ## Features

@@ -10,18 +10,30 @@ use Illuminate\Support\Fluent;
 
 class CreateCompiler
 {
-    public static function compile(Grammar $grammar, Blueprint $blueprint, array $columns, array $commands = []): string
+    public static function compile(Grammar $grammar, Blueprint $blueprint, array $columns, array $commands = []): array
     {
-        $compiledCommand = sprintf('%s table %s %s (%s)',
-            $blueprint->temporary ? 'create temporary' : 'create',
-            self::beforeTable($commands['ifNotExists']),
-            $grammar->wrapTable($blueprint),
-            $commands['like']
-                ? self::compileLike($grammar, $commands['like'])
-                : self::compileColumns($columns)
+        return array_values(
+            array_filter(
+                array_merge(
+                    [
+                        str_replace(
+                            '  ',
+                            ' ',
+                            sprintf(
+                                '%s table %s %s (%s)',
+                                $blueprint->temporary ? 'create temporary' : 'create',
+                                self::beforeTable($commands['ifNotExists']),
+                                $grammar->wrapTable($blueprint),
+                                $commands['like']
+                                    ? self::compileLike($grammar, $commands['like'])
+                                    : self::compileColumns($columns)
+                            )
+                        )
+                    ],
+                    $grammar->compileAutoIncrementStartingValues($blueprint)
+                )
+            )
         );
-
-        return str_replace('  ', ' ', trim($compiledCommand));
     }
 
     private static function beforeTable(?Fluent $command = null): string

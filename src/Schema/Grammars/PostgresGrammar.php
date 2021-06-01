@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Umbrellio\Postgres\Schema\Grammars;
 
+use Illuminate\Database\Connection;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\Grammars\PostgresGrammar as BasePostgresGrammar;
 use Illuminate\Support\Fluent;
@@ -43,7 +44,43 @@ class PostgresGrammar extends BasePostgresGrammar
 
         $watch = WatchCompiler::compile($this, $blueprint, $command, compact('onUpdate', 'onInsert', 'onDelete'));
 
-        return array_merge([$create], $watch);
+        return array_merge($create, $watch);
+    }
+
+    public function compileDrop(Blueprint $blueprint, Fluent $command): array
+    {
+        $drop = parent::compileDrop($blueprint, $command);
+        return array_merge(
+            [$drop],
+            TouchCompiler::dropTriggerFunctions($blueprint->getTable()),
+            ImmutableCompiler::dropTriggerFunctions($blueprint->getTable())
+        );
+    }
+
+    public function compileDropIfExists(Blueprint $blueprint, Fluent $command)
+    {
+        $drop = parent::compileDropIfExists($blueprint, $command);
+        return array_merge(
+            [$drop],
+            TouchCompiler::dropTriggerFunctions($blueprint->getTable()),
+            ImmutableCompiler::dropTriggerFunctions($blueprint->getTable())
+        );
+    }
+
+    public function compileRenameColumn(Blueprint $blueprint, Fluent $command, Connection $connection)
+    {
+        $rename = parent::compileRenameColumn($blueprint, $command, $connection);
+        return array_merge($rename, ImmutableCompiler::rename($this, $blueprint, $command));
+    }
+
+    public function compileDropColumn(Blueprint $blueprint, Fluent $command)
+    {
+        $drop = parent::compileDropColumn($blueprint, $command);
+        return array_merge(
+            [$drop],
+            TouchCompiler::drop($this, $blueprint, $command),
+            ImmutableCompiler::drop($this, $blueprint, $command)
+        );
     }
 
     public function compileAttachPartition(Blueprint $blueprint, Fluent $command): string
