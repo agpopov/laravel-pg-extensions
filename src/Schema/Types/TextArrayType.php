@@ -7,11 +7,11 @@ namespace Umbrellio\Postgres\Schema\Types;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Types\Type;
 
-class ArrayType extends Type
+class TextArrayType extends Type
 {
-    public const TYPE_NAME = 'array';
+    public const TYPE_NAME = '_text';
 
-    public function getSQLDeclaration(array $fieldDeclaration, AbstractPlatform $platform)
+    public function getSQLDeclaration(array $column, AbstractPlatform $platform): string
     {
         return static::TYPE_NAME;
     }

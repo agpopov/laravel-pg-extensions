@@ -15,9 +15,15 @@ use Umbrellio\Postgres\Extensions\Exceptions\ExtensionInvalidException;
 use Umbrellio\Postgres\Schema\Builder;
 use Umbrellio\Postgres\Schema\Grammars\PostgresGrammar;
 use Umbrellio\Postgres\Schema\Subscribers\SchemaAlterTableChangeColumnSubscriber;
-use Umbrellio\Postgres\Schema\Types\ArrayType;
+use Umbrellio\Postgres\Schema\Types\Int2ArrayType;
+use Umbrellio\Postgres\Schema\Types\Int4ArrayType;
+use Umbrellio\Postgres\Schema\Types\Int8ArrayType;
+use Umbrellio\Postgres\Schema\Types\NumericArrayType;
 use Umbrellio\Postgres\Schema\Types\NumericType;
+use Umbrellio\Postgres\Schema\Types\TextArrayType;
+use Umbrellio\Postgres\Schema\Types\TimestampArrayType;
 use Umbrellio\Postgres\Schema\Types\TsRangeType;
+use Umbrellio\Postgres\Schema\Types\UuidArrayType;
 
 class PostgresConnection extends BasePostgresConnection
 {
@@ -25,12 +31,18 @@ class PostgresConnection extends BasePostgresConnection
 
     public $name;
 
-    private static $extensions = [];
+    private static array $extensions = [];
 
-    private $initialTypes = [
+    private array $initialTypes = [
         TsRangeType::TYPE_NAME => TsRangeType::class,
         NumericType::TYPE_NAME => NumericType::class,
-        ArrayType::TYPE_NAME => ArrayType::class
+        UuidArrayType::TYPE_NAME => UuidArrayType::class,
+        NumericArrayType::TYPE_NAME => NumericArrayType::class,
+        TextArrayType::TYPE_NAME => TextArrayType::class,
+        Int2ArrayType::TYPE_NAME => Int2ArrayType::class,
+        Int4ArrayType::TYPE_NAME => Int4ArrayType::class,
+        Int8ArrayType::TYPE_NAME => Int8ArrayType::class,
+        TimestampArrayType::TYPE_NAME => TimestampArrayType::class,
     ];
 
     /**

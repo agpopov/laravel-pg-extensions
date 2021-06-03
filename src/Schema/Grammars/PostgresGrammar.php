@@ -22,7 +22,6 @@ use Umbrellio\Postgres\Schema\Builders\Constraints\Check\CheckBuilder;
 use Umbrellio\Postgres\Schema\Builders\Constraints\Exclude\ExcludeBuilder;
 use Umbrellio\Postgres\Schema\Builders\Indexes\Unique\UniqueBuilder;
 use Umbrellio\Postgres\Schema\Builders\Indexes\Unique\UniquePartialBuilder;
-use Umbrellio\Postgres\Schema\Types\ArrayType;
 use Umbrellio\Postgres\Schema\Types\NumericType;
 use Umbrellio\Postgres\Schema\Types\PostgresEnumType;
 use Umbrellio\Postgres\Schema\Types\TsRangeType;
@@ -213,9 +212,7 @@ class PostgresGrammar extends BasePostgresGrammar
 
     public function typeArray(Fluent $column): string
     {
-        $arrayType = $column->get('arrayType');
-
-        return "$arrayType " . ArrayType::TYPE_NAME;
+        return "{$column->get('arrayType')}[]";
     }
 
     protected function typeNumeric(Fluent $column): string

@@ -25,6 +25,9 @@ class Builder extends BasePostgresBuilder
     {
         foreach (PostgresEnumType::getAll($table) as $type) {
             $this->connection->getSchemaBuilder()->registerCustomDoctrineType($type->getClassName(), $type->getName(), $type->getName());
+            $array = clone $type;
+            $array->setName('_' . $array->getName());
+            $this->connection->getSchemaBuilder()->registerCustomDoctrineType($array->getClassName(), $array->getName(), $array->getName());
         }
 
         parent::table($table, $callback);
