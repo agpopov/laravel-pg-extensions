@@ -8,105 +8,58 @@ namespace Umbrellio\Postgres\Compilers;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\ColumnDefinition;
 use Illuminate\Database\Schema\Grammars\Grammar;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Fluent;
-use JetBrains\PhpStorm\Pure;
+use Umbrellio\Postgres\Functions\ImmutableFunction;
+use Umbrellio\Postgres\Triggers\ImmutableTrigger;
 
 class ImmutableCompiler
 {
-    private static function functionName(string $column, string $table): string
-    {
-        return "immutable_{$column}_on_$table";
-    }
-
-    private static function triggerName(string $column): string
-    {
-        return "immutable_$column";
-    }
-
-    #[Pure] private static function __create(string $column, string $table): array
-    {
-        return [
-            sprintf(
-                'create or replace function %s() returns trigger language plpgsql as
-                $$
-                begin
-                    NEW.%s = OLD.%s;
-                    return NEW;
-                end;
-                $$',
-                static::functionName($column, $table),
-                $column,
-                $column,
-            ),
-            sprintf(
-                'create trigger %s before update on %s for each row execute function %s()',
-                static::triggerName($column),
-                $table,
-                static::functionName($column, $table),
-            )
-        ];
-    }
-
-    #[Pure] private static function __drop(string $column, string $table): array
-    {
-        return [
-            sprintf(
-                'drop trigger if exists %s on %s',
-                static::triggerName($column),
-                $table,
-            ),
-            sprintf(
-                'drop function if exists %s cascade',
-                static::functionName($column, $table),
-            )
-        ];
-    }
 
     public static function compile(Grammar $grammar, Blueprint $blueprint, Fluent $command): array
     {
         $column = ($c = $command->get('column')) instanceof ColumnDefinition ? $c->get('name') : $c;
-        return static::__create($column, $blueprint->getTable());
+        $function = new ImmutableFunction($blueprint->getTable(), $column);
+        $trigger = new ImmutableTrigger($function);
+        $trigger->setOrder('before')->onUpdate();
+        return [$function->compile(), $trigger->compile()];
     }
 
-    public static function drop(Grammar $grammar, Blueprint $blueprint, Fluent $command): array
+    public static function compileDrop(Grammar $grammar, Blueprint $blueprint, Fluent $command): array
     {
         $columns = $command->get('columns') ?: (array)$command->get('column');
         $drop = [];
         foreach ($columns as $column) {
-            $drop = array_merge($drop, static::__drop($column, $blueprint->getTable()));
+            $function = new ImmutableFunction($blueprint->getTable(), $column);
+            $trigger = new ImmutableTrigger($function);
+            $drop[] = $trigger->compileDrop();
+            $drop[] = $function->compileDrop();
         }
         return $drop;
     }
 
-    public static function rename(Grammar $grammar, Blueprint $blueprint, Fluent $command): array
+    public static function compileRename(Grammar $grammar, Blueprint $blueprint, Fluent $command): array
     {
         $rename = [];
-        if (DB::selectOne(
-            sprintf(
-                "select proname from pg_proc where proname = '%s'",
-                static::functionName($command->get('from'), $blueprint->getTable())
-            )
-        )) {
-            $rename = array_merge($rename, static::__drop($command->get('from'), $blueprint->getTable()));
-            $rename = array_merge($rename, static::__create($command->get('to'), $blueprint->getTable()));
+        $function = new ImmutableFunction($blueprint->getTable(), $command->get('from'));
+        if ($function->exists()) {
+            $trigger = new ImmutableTrigger($function);
+            $rename[] = $trigger->compileDrop();
+            $rename[] = $function->compileDrop();
+            $newFunction = new ImmutableFunction($blueprint->getTable(), $command->get('to'));
+            $newTrigger = new ImmutableTrigger($newFunction);
+            $newTrigger->setOrder('before')->onUpdate();
+            $rename[] = $newFunction->compile();
+            $rename[] = $newTrigger->compile();
         }
 
         return $rename;
     }
 
-    public static function dropTriggerFunctions(string $table): array
+    public static function compileDropAllFunctions(string $table): array
     {
         $drop = [];
-        foreach (
-            DB::select(
-                sprintf(
-                    "select proname from pg_proc where proname like '%s'",
-                    static::functionName('%', $table)
-                )
-            ) as $function
-        ) {
-            $drop[] = sprintf('drop function if exists %s cascade', $function->proname);
+        foreach (ImmutableFunction::getAll($table) as $function) {
+            $drop[] = $function->compileDrop();
         }
 
         return $drop;

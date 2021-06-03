@@ -32,7 +32,7 @@ class EnumCompiler
 
     public static function rename(Grammar $grammar, Blueprint $blueprint, Fluent $command): array
     {
-        if (PostgresEnumType::getInstance($blueprint->getTable(), $command->get('from'))->isExists()) {
+        if (PostgresEnumType::getInstance($blueprint->getTable(), $command->get('from'))->exists()) {
             return [
                 sprintf(
                     'alter type %s rename to %s',
@@ -48,7 +48,6 @@ class EnumCompiler
     public static function dropAll(string $table): array
     {
         $drop = [];
-        /** @var PostgresEnumType $type */
         foreach (PostgresEnumType::getAll($table) as $type) {
             $drop[] = sprintf('drop type if exists %s cascade', $type->getName());
         }

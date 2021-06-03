@@ -38,16 +38,21 @@ class PostgresEnumType
         return $this->name;
     }
 
-    public function isExists(): bool
+    public function exists(): bool
     {
-        $db = DB::selectOne(
+        $raw = DB::selectOne(
             'select count(*) as cnt from pg_type inner join pg_enum on pg_enum.enumtypid = pg_type.oid where pg_type.typname=?',
             [$this->getName()]
         );
 
-        return $db->cnt > 0;
+        return $raw->cnt > 0;
     }
 
+    /**
+     * @param string $table
+     *
+     * @return array|static[]
+     */
     public static function getAll(string $table): array
     {
         $types = [];
@@ -69,14 +74,11 @@ class PostgresEnumType
     {
         return eval(
             'return new class extends Doctrine\DBAL\Types\Type {
-
                 public const TYPE_NAME = "' . $this->getName() . '";
-
-                public function getSQLDeclaration(array $fieldDeclaration, Doctrine\DBAL\Platforms\AbstractPlatform $platform): string
+                public function getSQLDeclaration(array $column, Doctrine\DBAL\Platforms\AbstractPlatform $platform): string
                 {
                     return self::TYPE_NAME;
                 }
-
                 public function getName(): string
                 {
                     return self::TYPE_NAME;

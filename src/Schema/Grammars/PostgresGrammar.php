@@ -13,11 +13,11 @@ use Umbrellio\Postgres\Compilers\CheckCompiler;
 use Umbrellio\Postgres\Compilers\CreateCompiler;
 use Umbrellio\Postgres\Compilers\EnumCompiler;
 use Umbrellio\Postgres\Compilers\ExcludeCompiler;
-use Umbrellio\Postgres\Compilers\FunctionsCompiler;
 use Umbrellio\Postgres\Compilers\ImmutableCompiler;
 use Umbrellio\Postgres\Compilers\TouchCompiler;
 use Umbrellio\Postgres\Compilers\UniqueCompiler;
 use Umbrellio\Postgres\Compilers\WatchCompiler;
+use Umbrellio\Postgres\Functions\JsonToArrayFunction;
 use Umbrellio\Postgres\Schema\Builders\Constraints\Check\CheckBuilder;
 use Umbrellio\Postgres\Schema\Builders\Constraints\Exclude\ExcludeBuilder;
 use Umbrellio\Postgres\Schema\Builders\Indexes\Unique\UniqueBuilder;
@@ -35,7 +35,7 @@ class PostgresGrammar extends BasePostgresGrammar
         $ifNotExists = $this->getCommandByName($blueprint, 'ifNotExists');
         $onUpdate = $this->getCommandByName($blueprint, 'watchUpdate');
         $onInsert = $this->getCommandByName($blueprint, 'watchInsert');
-        $onDelete = $this->getCommandByName($blueprint, 'watchDelete');
+        $disallowDelete = $this->getCommandByName($blueprint, 'disallowDelete');
 
         $create = CreateCompiler::compile(
             $this,
@@ -44,7 +44,7 @@ class PostgresGrammar extends BasePostgresGrammar
             compact('like', 'ifNotExists')
         );
 
-        $watch = WatchCompiler::compile($this, $blueprint, $command, compact('onUpdate', 'onInsert', 'onDelete'));
+        $watch = WatchCompiler::compile($this, $blueprint, $command, compact('onUpdate', 'onInsert', 'disallowDelete'));
 
         return array_merge($create, $watch);
     }
@@ -54,8 +54,8 @@ class PostgresGrammar extends BasePostgresGrammar
         $drop = parent::compileDrop($blueprint, $command);
         return array_merge(
             [$drop],
-            TouchCompiler::dropTriggerFunctions($blueprint->getTable()),
-            ImmutableCompiler::dropTriggerFunctions($blueprint->getTable()),
+            TouchCompiler::compileDropAllFunctions($blueprint->getTable()),
+            ImmutableCompiler::compileDropAllFunctions($blueprint->getTable()),
             EnumCompiler::dropAll($blueprint->getTable())
         );
     }
@@ -65,8 +65,8 @@ class PostgresGrammar extends BasePostgresGrammar
         $drop = parent::compileDropIfExists($blueprint, $command);
         return array_merge(
             [$drop],
-            TouchCompiler::dropTriggerFunctions($blueprint->getTable()),
-            ImmutableCompiler::dropTriggerFunctions($blueprint->getTable()),
+            TouchCompiler::compileDropAllFunctions($blueprint->getTable()),
+            ImmutableCompiler::compileDropAllFunctions($blueprint->getTable()),
             EnumCompiler::dropAll($blueprint->getTable())
         );
     }
@@ -76,7 +76,8 @@ class PostgresGrammar extends BasePostgresGrammar
         $rename = parent::compileRenameColumn($blueprint, $command, $connection);
         return array_merge(
             $rename,
-            ImmutableCompiler::rename($this, $blueprint, $command),
+            TouchCompiler::compileRename($this, $blueprint, $command),
+            ImmutableCompiler::compileRename($this, $blueprint, $command),
             EnumCompiler::rename($this, $blueprint, $command),
         );
     }
@@ -86,8 +87,8 @@ class PostgresGrammar extends BasePostgresGrammar
         $drop = parent::compileDropColumn($blueprint, $command);
         return array_merge(
             [$drop],
-            TouchCompiler::drop($this, $blueprint, $command),
-            ImmutableCompiler::drop($this, $blueprint, $command),
+            TouchCompiler::compileDrop($this, $blueprint, $command),
+            ImmutableCompiler::compileDrop($this, $blueprint, $command),
             EnumCompiler::drop($this, $blueprint, $command)
         );
     }
@@ -165,17 +166,37 @@ class PostgresGrammar extends BasePostgresGrammar
 
     public function compileDropImmutable(Blueprint $blueprint, Fluent $command): array
     {
-        return ImmutableCompiler::drop($this, $blueprint, $command);
+        return ImmutableCompiler::compileDrop($this, $blueprint, $command);
+    }
+
+    public function compileDropWatchInsert(Blueprint $blueprint, Fluent $command): string
+    {
+        return WatchCompiler::compileDropInsert($this, $blueprint, $command);
+    }
+
+    public function compileDropWatchUpdate(Blueprint $blueprint, Fluent $command): string
+    {
+        return WatchCompiler::compileDropUpdate($this, $blueprint, $command);
+    }
+
+    public function compileDropWatchDelete(Blueprint $blueprint, Fluent $command): string
+    {
+        return WatchCompiler::compileDropDelete($this, $blueprint, $command);
     }
 
     public function compileCreateJsonToArrayFunction(Blueprint $blueprint, Fluent $command): ?string
     {
-        return FunctionsCompiler::compile('jsonToArrayFunction');
+        $function = JsonToArrayFunction::getInstance();
+        if (! $function->exists()) {
+            return $function->compile();
+        }
+
+        return null;
     }
 
     public function compileAddUuidExtension(Blueprint $blueprint, Fluent $command): ?string
     {
-        return FunctionsCompiler::compile('uuidExtension');
+        return 'create extension if not exists "uuid-ossp"';
     }
 
     public function compileForeign(Blueprint $blueprint, Fluent $command): array|string

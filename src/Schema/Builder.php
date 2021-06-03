@@ -9,6 +9,10 @@ use Illuminate\Database\Schema\PostgresBuilder as BasePostgresBuilder;
 use Illuminate\Support\Traits\Macroable;
 use Umbrellio\Postgres\Compilers\ImmutableCompiler;
 use Umbrellio\Postgres\Compilers\TouchCompiler;
+use Umbrellio\Postgres\Functions\JsonToArrayFunction;
+use Umbrellio\Postgres\Functions\OnDeleteFunction;
+use Umbrellio\Postgres\Functions\OnInsertFunction;
+use Umbrellio\Postgres\Functions\OnUpdateFunction;
 use Umbrellio\Postgres\Schema\Types\PostgresEnumType;
 
 class Builder extends BasePostgresBuilder
@@ -19,7 +23,6 @@ class Builder extends BasePostgresBuilder
 
     public function table($table, Closure $callback)
     {
-        /** @var PostgresEnumType $type */
         foreach (PostgresEnumType::getAll($table) as $type) {
             $this->connection->getSchemaBuilder()->registerCustomDoctrineType($type->getClassName(), $type->getName(), $type->getName());
         }
@@ -90,20 +93,20 @@ class Builder extends BasePostgresBuilder
             if (! in_array($table, $excludedTables)) {
                 $tables[] = $table;
 
-                foreach (TouchCompiler::dropTriggerFunctions($table) as $drop) {
+                foreach (TouchCompiler::compileDropAllFunctions($table) as $drop) {
                     $this->connection->statement($drop);
                 }
 
-                foreach (ImmutableCompiler::dropTriggerFunctions($table) as $drop) {
+                foreach (ImmutableCompiler::compileDropAllFunctions($table) as $drop) {
                     $this->connection->statement($drop);
                 }
             }
         }
 
-        $this->connection->statement('drop function if exists on_update cascade');
-        $this->connection->statement('drop function if exists on_delete cascade');
-        $this->connection->statement('drop function if exists on_insert cascade');
-        $this->connection->statement('drop function if exists json_to_array cascade');
+        $this->connection->statement(OnUpdateFunction::getInstance()->compileDrop());
+        $this->connection->statement(OnDeleteFunction::getInstance()->compileDrop());
+        $this->connection->statement(OnInsertFunction::getInstance()->compileDrop());
+        $this->connection->statement(JsonToArrayFunction::getInstance()->compileDrop());
         $this->dropAllTypes();
 
         if (empty($tables)) {

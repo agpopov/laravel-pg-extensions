@@ -99,6 +99,11 @@ class Blueprint extends BaseBlueprint
         }
     }
 
+    public function dropWatchColumns(): void
+    {
+        $this->dropColumn(['created_at', 'updated_at', 'created_by', 'updated_by']);
+    }
+
     public function addSoftDeleteColumns(): void
     {
         $columns = [
@@ -113,6 +118,11 @@ class Blueprint extends BaseBlueprint
         if ($columns['deleted_by']) {
             $this->uuid('deleted_by')->nullable();
         }
+    }
+
+    public function dropSoftDeleteColumns(): void
+    {
+        $this->dropColumn(['deleted_at', 'deleted_by']);
     }
 
     public function watchUpdate(): Fluent
@@ -130,7 +140,32 @@ class Blueprint extends BaseBlueprint
     public function watchDelete(): Fluent
     {
         $this->addSoftDeleteColumns();
-        return $this->addCommand('watchDelete');
+        return $this->addCommand('disallowDelete');
+    }
+
+    public function disallowDelete(): Fluent
+    {
+        return $this->addCommand('disallowDelete');
+    }
+
+    public function dropWatchInsert(): Fluent
+    {
+        return $this->addCommand('dropWatchInsert');
+    }
+
+    public function dropWatchUpdate(): Fluent
+    {
+        return $this->addCommand('dropWatchUpdate');
+    }
+
+    public function dropWatchDelete(): Fluent
+    {
+        return $this->addCommand('dropWatchDelete');
+    }
+
+    public function allowDelete(): Fluent
+    {
+        return $this->addCommand('dropWatchDelete');
     }
 
     /**
@@ -264,7 +299,7 @@ class Blueprint extends BaseBlueprint
 
     public function enum($column, array $allowed): Fluent
     {
-        if (! PostgresEnumType::getInstance($this->getTable(), $column)->isExists()) {
+        if (! PostgresEnumType::getInstance($this->getTable(), $column)->exists()) {
             $this->commands = Arr::prepend($this->commands, $this->createCommand('enum', compact('column', 'allowed')));
         }
 
