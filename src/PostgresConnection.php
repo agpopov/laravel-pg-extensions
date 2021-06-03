@@ -30,7 +30,7 @@ class PostgresConnection extends BasePostgresConnection
     private $initialTypes = [
         TsRangeType::TYPE_NAME => TsRangeType::class,
         NumericType::TYPE_NAME => NumericType::class,
-        ArrayType::TYPE_NAME => ArrayType::class,
+        ArrayType::TYPE_NAME => ArrayType::class
     ];
 
     /**

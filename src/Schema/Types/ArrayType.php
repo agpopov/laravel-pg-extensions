@@ -5,8 +5,9 @@ namespace Umbrellio\Postgres\Schema\Types;
 
 
 use Doctrine\DBAL\Platforms\AbstractPlatform;
+use Doctrine\DBAL\Types\Type;
 
-class ArrayType
+class ArrayType extends Type
 {
     public const TYPE_NAME = 'array';
 

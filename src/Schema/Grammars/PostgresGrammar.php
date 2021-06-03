@@ -11,6 +11,7 @@ use Illuminate\Support\Fluent;
 use Umbrellio\Postgres\Compilers\AttachPartitionCompiler;
 use Umbrellio\Postgres\Compilers\CheckCompiler;
 use Umbrellio\Postgres\Compilers\CreateCompiler;
+use Umbrellio\Postgres\Compilers\EnumCompiler;
 use Umbrellio\Postgres\Compilers\ExcludeCompiler;
 use Umbrellio\Postgres\Compilers\FunctionsCompiler;
 use Umbrellio\Postgres\Compilers\ImmutableCompiler;
@@ -23,6 +24,7 @@ use Umbrellio\Postgres\Schema\Builders\Indexes\Unique\UniqueBuilder;
 use Umbrellio\Postgres\Schema\Builders\Indexes\Unique\UniquePartialBuilder;
 use Umbrellio\Postgres\Schema\Types\ArrayType;
 use Umbrellio\Postgres\Schema\Types\NumericType;
+use Umbrellio\Postgres\Schema\Types\PostgresEnumType;
 use Umbrellio\Postgres\Schema\Types\TsRangeType;
 
 class PostgresGrammar extends BasePostgresGrammar
@@ -53,33 +55,40 @@ class PostgresGrammar extends BasePostgresGrammar
         return array_merge(
             [$drop],
             TouchCompiler::dropTriggerFunctions($blueprint->getTable()),
-            ImmutableCompiler::dropTriggerFunctions($blueprint->getTable())
+            ImmutableCompiler::dropTriggerFunctions($blueprint->getTable()),
+            EnumCompiler::dropAll($blueprint->getTable())
         );
     }
 
-    public function compileDropIfExists(Blueprint $blueprint, Fluent $command)
+    public function compileDropIfExists(Blueprint $blueprint, Fluent $command): array|string
     {
         $drop = parent::compileDropIfExists($blueprint, $command);
         return array_merge(
             [$drop],
             TouchCompiler::dropTriggerFunctions($blueprint->getTable()),
-            ImmutableCompiler::dropTriggerFunctions($blueprint->getTable())
+            ImmutableCompiler::dropTriggerFunctions($blueprint->getTable()),
+            EnumCompiler::dropAll($blueprint->getTable())
         );
     }
 
-    public function compileRenameColumn(Blueprint $blueprint, Fluent $command, Connection $connection)
+    public function compileRenameColumn(Blueprint $blueprint, Fluent $command, Connection $connection): array
     {
         $rename = parent::compileRenameColumn($blueprint, $command, $connection);
-        return array_merge($rename, ImmutableCompiler::rename($this, $blueprint, $command));
+        return array_merge(
+            $rename,
+            ImmutableCompiler::rename($this, $blueprint, $command),
+            EnumCompiler::rename($this, $blueprint, $command),
+        );
     }
 
-    public function compileDropColumn(Blueprint $blueprint, Fluent $command)
+    public function compileDropColumn(Blueprint $blueprint, Fluent $command): array
     {
         $drop = parent::compileDropColumn($blueprint, $command);
         return array_merge(
             [$drop],
             TouchCompiler::drop($this, $blueprint, $command),
-            ImmutableCompiler::drop($this, $blueprint, $command)
+            ImmutableCompiler::drop($this, $blueprint, $command),
+            EnumCompiler::drop($this, $blueprint, $command)
         );
     }
 
@@ -208,6 +217,16 @@ class PostgresGrammar extends BasePostgresGrammar
     protected function typeTsrange(/** @scrutinizer ignore-unused */ Fluent $column): string
     {
         return TsRangeType::TYPE_NAME;
+    }
+
+    protected function typeEnum(Fluent $column): string
+    {
+        return PostgresEnumType::getInstance($column->get('blueprint')->getTable(), $column->get('name'))->getName();
+    }
+
+    public function compileEnum(Blueprint $blueprint, Fluent $command): string
+    {
+        return EnumCompiler::compile($this, $blueprint, $command);
     }
 
     public function getFluentCommands(): array

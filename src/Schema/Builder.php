@@ -9,12 +9,23 @@ use Illuminate\Database\Schema\PostgresBuilder as BasePostgresBuilder;
 use Illuminate\Support\Traits\Macroable;
 use Umbrellio\Postgres\Compilers\ImmutableCompiler;
 use Umbrellio\Postgres\Compilers\TouchCompiler;
+use Umbrellio\Postgres\Schema\Types\PostgresEnumType;
 
 class Builder extends BasePostgresBuilder
 {
     use Macroable;
 
     public $name;
+
+    public function table($table, Closure $callback)
+    {
+        /** @var PostgresEnumType $type */
+        foreach (PostgresEnumType::getAll($table) as $type) {
+            $this->connection->getSchemaBuilder()->registerCustomDoctrineType($type->getClassName(), $type->getName(), $type->getName());
+        }
+
+        parent::table($table, $callback);
+    }
 
     public function createView(string $view, string $select, $materialize = false): void
     {
@@ -72,7 +83,7 @@ class Builder extends BasePostgresBuilder
         $excludedTables = $this->connection->getConfig('dont_drop') ?? ['spatial_ref_sys'];
 
         foreach ($this->getAllTables() as $row) {
-            $row = (array) $row;
+            $row = (array)$row;
 
             $table = reset($row);
 
@@ -93,6 +104,7 @@ class Builder extends BasePostgresBuilder
         $this->connection->statement('drop function if exists on_delete cascade');
         $this->connection->statement('drop function if exists on_insert cascade');
         $this->connection->statement('drop function if exists json_to_array cascade');
+        $this->dropAllTypes();
 
         if (empty($tables)) {
             return;

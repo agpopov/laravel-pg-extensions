@@ -20,6 +20,7 @@ use Umbrellio\Postgres\Schema\Definitions\ExcludeDefinition;
 use Umbrellio\Postgres\Schema\Definitions\LikeDefinition;
 use Umbrellio\Postgres\Schema\Definitions\UniqueDefinition;
 use Umbrellio\Postgres\Schema\Definitions\ViewDefinition;
+use Umbrellio\Postgres\Schema\Types\PostgresEnumType;
 
 class Blueprint extends BaseBlueprint
 {
@@ -259,6 +260,15 @@ class Blueprint extends BaseBlueprint
     public function dropImmutable(string $column): Fluent
     {
         return $this->addCommand('dropImmutable', compact('column'));
+    }
+
+    public function enum($column, array $allowed): Fluent
+    {
+        if (! PostgresEnumType::getInstance($this->getTable(), $column)->isExists()) {
+            $this->commands = Arr::prepend($this->commands, $this->createCommand('enum', compact('column', 'allowed')));
+        }
+
+        return $this->addColumn('enum', $column, ['allowed' => $allowed, 'blueprint' => $this]);
     }
 
     protected function getSchemaManager(): AbstractSchemaManager
