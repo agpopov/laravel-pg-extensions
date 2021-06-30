@@ -14,12 +14,15 @@ use Umbrellio\Postgres\Compilers\CreateCompiler;
 use Umbrellio\Postgres\Compilers\EnumCompiler;
 use Umbrellio\Postgres\Compilers\ExcludeCompiler;
 use Umbrellio\Postgres\Compilers\ImmutableCompiler;
+use Umbrellio\Postgres\Compilers\IndexCompiler;
 use Umbrellio\Postgres\Compilers\TouchCompiler;
 use Umbrellio\Postgres\Compilers\UniqueCompiler;
 use Umbrellio\Postgres\Compilers\WatchCompiler;
 use Umbrellio\Postgres\Functions\JsonToArrayFunction;
 use Umbrellio\Postgres\Schema\Builders\Constraints\Check\CheckBuilder;
 use Umbrellio\Postgres\Schema\Builders\Constraints\Exclude\ExcludeBuilder;
+use Umbrellio\Postgres\Schema\Builders\Indexes\Index\IndexBuilder;
+use Umbrellio\Postgres\Schema\Builders\Indexes\Index\IndexPartialBuilder;
 use Umbrellio\Postgres\Schema\Builders\Indexes\Unique\UniqueBuilder;
 use Umbrellio\Postgres\Schema\Builders\Indexes\Unique\UniquePartialBuilder;
 use Umbrellio\Postgres\Schema\Types\NumericType;
@@ -124,6 +127,16 @@ class PostgresGrammar extends BasePostgresGrammar
         );
     }
 
+    public function compileCreateRecursiveView(/** @scrutinizer ignore-unused */ Blueprint $blueprint, Fluent $command): string
+    {
+        return sprintf(
+            'create recursive view %s (%s) as (%s)',
+            $this->wrapTable($command->get('view')),
+            $this->columnize($command->get('columns')),
+            $command->get('select')
+        );
+    }
+
     public function compileDropView(/** @scrutinizer ignore-unused */ Blueprint $blueprint, Fluent $command): string
     {
         return 'drop view ' . $this->wrapTable($command->get('view'));
@@ -146,6 +159,15 @@ class PostgresGrammar extends BasePostgresGrammar
             return UniqueCompiler::compile($this, $blueprint, $command, $constraints);
         }
         return $this->compileUnique($blueprint, $command);
+    }
+
+    public function compileIndexPartial(Blueprint $blueprint, IndexBuilder $command): string
+    {
+        $constraints = $command->get('constraints');
+        if ($constraints instanceof IndexPartialBuilder) {
+            return IndexCompiler::compile($this, $blueprint, $command, $constraints);
+        }
+        return $this->compileIndex($blueprint, $command);
     }
 
     public function compileExclude(Blueprint $blueprint, ExcludeBuilder $command): string

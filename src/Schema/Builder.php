@@ -40,6 +40,13 @@ class Builder extends BasePostgresBuilder
         $this->build($blueprint);
     }
 
+    public function createRecursiveView(string $view, array $columns, string $select): void
+    {
+        $blueprint = $this->createBlueprint($view);
+        $blueprint->createRecursiveView($view, $columns, $select);
+        $this->build($blueprint);
+    }
+
     public function dropView(string $view): void
     {
         $blueprint = $this->createBlueprint($view);

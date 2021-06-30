@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Fluent;
 use Umbrellio\Postgres\Schema\Builders\Constraints\Check\CheckBuilder;
 use Umbrellio\Postgres\Schema\Builders\Constraints\Exclude\ExcludeBuilder;
+use Umbrellio\Postgres\Schema\Builders\Indexes\Index\IndexBuilder;
 use Umbrellio\Postgres\Schema\Builders\Indexes\Unique\UniqueBuilder;
 use Umbrellio\Postgres\Schema\Definitions\AttachPartitionDefinition;
 use Umbrellio\Postgres\Schema\Definitions\CheckDefinition;
@@ -169,11 +170,9 @@ class Blueprint extends BaseBlueprint
     }
 
     /**
-     * @param array|string $columns
-     *
      * @return UniqueDefinition|UniqueBuilder
      */
-    public function uniquePartial($columns, ?string $index = null, ?string $algorithm = null): Fluent
+    public function uniquePartial(array|string $columns, ?string $index = null, ?string $algorithm = null): Fluent
     {
         $columns = (array)$columns;
 
@@ -182,6 +181,22 @@ class Blueprint extends BaseBlueprint
         return $this->addExtendedCommand(
             UniqueBuilder::class,
             'uniquePartial',
+            compact('columns', 'index', 'algorithm')
+        );
+    }
+
+    /**
+     * @return UniqueDefinition|IndexBuilder
+     */
+    public function indexPartial(array|string $columns, ?string $index = null, ?string $algorithm = null): Fluent
+    {
+        $columns = (array)$columns;
+
+        $index = $index ?: $this->createIndexName('index', $columns);
+
+        return $this->addExtendedCommand(
+            IndexBuilder::class,
+            'indexPartial',
             compact('columns', 'index', 'algorithm')
         );
     }
@@ -244,6 +259,14 @@ class Blueprint extends BaseBlueprint
     public function createView(string $view, string $select, bool $materialize = false): Fluent
     {
         return $this->addCommand('createView', compact('view', 'select', 'materialize'));
+    }
+
+    /**
+     * @return ViewDefinition|Fluent
+     */
+    public function createRecursiveView(string $view, array $columns, string $select): Fluent
+    {
+        return $this->addCommand('createRecursiveView', compact('view', 'columns', 'select'));
     }
 
     public function dropView(string $view): Fluent

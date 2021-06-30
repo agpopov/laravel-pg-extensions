@@ -91,7 +91,7 @@ trait WheresBuilder
     protected static function wrapValue($value): int|string
     {
         if (is_string($value)) {
-            return "'{$value}'";
+            return "'$value'";
         }
         return (int) $value;
     }

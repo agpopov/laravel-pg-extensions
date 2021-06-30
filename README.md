@@ -64,13 +64,25 @@ Example:
 ```php
 // Facade methods:
 Schema::createView('active_users', "SELECT * FROM users WHERE active = 1");
-Schema::dropView('active_users')
+Schema::createRecursiveView('active_users', ['id', 'name'], "SELECT id, name FROM users WHERE active = 1");
+Schema::dropView('active_users');
 
 // Schema methods:
 Schema::create('users', function (Blueprint $table) {
     $table
         ->createView('active_users', "SELECT * FROM users WHERE active = 1")
         ->materialize();
+});
+```
+
+### Extended indexes creation
+
+Example:
+```php
+Schema::create('table', function (Blueprint $table) {
+    $table->string('code'); 
+    $table->softDeletes();
+    $table->indexPartial('code')->whereNull('deleted_at');
 });
 ```
 
