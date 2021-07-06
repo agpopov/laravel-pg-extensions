@@ -10,6 +10,6 @@ class OnDeleteFunction extends BaseCommonFunction
 
     public function getBody(): string
     {
-        return "RAISE EXCEPTION 'Impossible to delete row! Use soft delete.' USING ERRCODE = '23001';";
+        return "raise exception 'Impossible to delete row! Use soft delete.' using errcode = 23001;";
     }
 }
