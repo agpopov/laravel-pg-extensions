@@ -37,10 +37,10 @@ class ImmutableFunction extends BaseFunction
     public function getBody(): string
     {
         return sprintf(
-            "if (NEW.%s <> OLD.%s) then
+            "if (new.%s is distinct from old.%s) then
                 raise exception 'Invalid update row' using hint = 'Column \"%s\" is immutable', errcode = 23000;
             end if;
-            return NEW;",
+            return new;",
             $this->column,
             $this->column,
             $this->column
