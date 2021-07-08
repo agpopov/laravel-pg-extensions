@@ -33,17 +33,17 @@ class Builder extends BasePostgresBuilder
         parent::table($table, $callback);
     }
 
-    public function createView(string $view, string $select, $materialize = false): void
+    public function createView(string $view, string $select, bool $materialize = false): void
     {
         $blueprint = $this->createBlueprint($view);
         $blueprint->createView($view, $select, $materialize);
         $this->build($blueprint);
     }
 
-    public function createRecursiveView(string $view, array $columns, string $select): void
+    public function createRecursiveView(string $view, array $columns, string $select, bool $materialize = false): void
     {
         $blueprint = $this->createBlueprint($view);
-        $blueprint->createRecursiveView($view, $columns, $select);
+        $blueprint->createRecursiveView($view, $columns, $select, $materialize);
         $this->build($blueprint);
     }
 

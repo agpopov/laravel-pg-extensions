@@ -264,9 +264,9 @@ class Blueprint extends BaseBlueprint
     /**
      * @return ViewDefinition|Fluent
      */
-    public function createRecursiveView(string $view, array $columns, string $select): Fluent
+    public function createRecursiveView(string $view, array $columns, string $select, bool $materialize = false): Fluent
     {
-        return $this->addCommand('createRecursiveView', compact('view', 'columns', 'select'));
+        return $this->addCommand('createRecursiveView', compact('view', 'columns', 'select', 'materialize'));
     }
 
     public function dropView(string $view): Fluent

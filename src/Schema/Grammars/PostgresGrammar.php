@@ -130,10 +130,15 @@ class PostgresGrammar extends BasePostgresGrammar
     public function compileCreateRecursiveView(/** @scrutinizer ignore-unused */ Blueprint $blueprint, Fluent $command): string
     {
         return sprintf(
-            'create recursive view %s (%s) as (%s)',
+            'create%s view %s(%s) as with recursive %s(%s) as (%s) select %s from %s',
+            $command->get('materialize') ? ' materialized' : '',
             $this->wrapTable($command->get('view')),
             $this->columnize($command->get('columns')),
-            $command->get('select')
+            $this->wrapTable($command->get('view')),
+            $this->columnize($command->get('columns')),
+            $command->get('select'),
+            $this->columnize($command->get('columns')),
+            $this->wrapTable($command->get('view'))
         );
     }
 

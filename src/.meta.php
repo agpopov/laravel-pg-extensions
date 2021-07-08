@@ -33,7 +33,7 @@ namespace Illuminate\Database\Schema {
      * @method UniqueDefinition uniquePartial($columns, ?string $index = null, ?string $algorithm = null)
      * @method UniqueDefinition indexPartial($columns, ?string $index = null, ?string $algorithm = null)
      * @method ViewDefinition createView(string $view, string $select, bool $materialize = false)
-     * @method ViewDefinition createRecursiveView(string $view, array $columns, string $select)
+     * @method ViewDefinition createRecursiveView(string $view, array $columns, string $select, bool $materialize = false)
      * @method Fluent dropView(string $view)
      * @method ColumnDefinition numeric(string $column, ?int $precision = null, ?int $scale = null)
      * @method ColumnDefinition tsrange(string $column)
