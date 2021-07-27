@@ -8,6 +8,7 @@ use DB;
 use Doctrine\DBAL\Schema\AbstractSchemaManager;
 use Illuminate\Database\Schema\Blueprint as BaseBlueprint;
 use Illuminate\Database\Schema\ColumnDefinition;
+use Illuminate\Database\Schema\Grammars\Grammar;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Fluent;
@@ -21,11 +22,10 @@ use Umbrellio\Postgres\Schema\Definitions\ExcludeDefinition;
 use Umbrellio\Postgres\Schema\Definitions\LikeDefinition;
 use Umbrellio\Postgres\Schema\Definitions\UniqueDefinition;
 use Umbrellio\Postgres\Schema\Definitions\ViewDefinition;
-use Umbrellio\Postgres\Schema\Types\PostgresEnumType;
 
 class Blueprint extends BaseBlueprint
 {
-    protected $commands = [];
+    protected $types = [];
 
     /**
      * @return AttachPartitionDefinition|Fluent
@@ -322,16 +322,33 @@ class Blueprint extends BaseBlueprint
 
     public function enum($column, array $allowed): Fluent
     {
-        if (! PostgresEnumType::getInstance($this->getTable(), $column)->exists()) {
-            $this->commands = Arr::prepend($this->commands, $this->createCommand('enum', compact('column', 'allowed')));
-        }
-
+        $this->addType('enum', compact('column', 'allowed'));
         return $this->addColumn('enum', $column, ['allowed' => $allowed, 'blueprint' => $this]);
+    }
+
+    protected function addType(string $name, array $parameters = []): Fluent
+    {
+        $this->types[] = $type = $this->createCommand($name, $parameters);
+        return $type;
+    }
+
+    public function getTypes(): array
+    {
+        return $this->types;
     }
 
     protected function getSchemaManager(): AbstractSchemaManager
     {
         return Schema::getConnection()->getDoctrineSchemaManager();
+    }
+
+    protected function addImpliedCommands(Grammar $grammar)
+    {
+        parent::addImpliedCommands($grammar);
+
+        foreach ($this->getTypes() as $typeCommand) {
+            array_unshift($this->commands, $typeCommand);
+        }
     }
 
     private function addExtendedCommand(string $fluent, string $name, array $parameters = []): Fluent
