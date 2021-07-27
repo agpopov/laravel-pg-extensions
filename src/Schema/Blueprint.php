@@ -22,6 +22,7 @@ use Umbrellio\Postgres\Schema\Definitions\ExcludeDefinition;
 use Umbrellio\Postgres\Schema\Definitions\LikeDefinition;
 use Umbrellio\Postgres\Schema\Definitions\UniqueDefinition;
 use Umbrellio\Postgres\Schema\Definitions\ViewDefinition;
+use Umbrellio\Postgres\Schema\Types\PostgresEnumType;
 
 class Blueprint extends BaseBlueprint
 {
@@ -332,7 +333,7 @@ class Blueprint extends BaseBlueprint
         return $type;
     }
 
-    public function getTypes(): array
+    public function getTypeCommands(): array
     {
         return $this->types;
     }
@@ -346,8 +347,10 @@ class Blueprint extends BaseBlueprint
     {
         parent::addImpliedCommands($grammar);
 
-        foreach ($this->getTypes() as $typeCommand) {
-            array_unshift($this->commands, $typeCommand);
+        foreach ($this->getTypeCommands() as $command) {
+            if (! PostgresEnumType::getInstance($this->getTable(), $command->get('column'))->exists()) {
+                array_unshift($this->commands, $command);
+            }
         }
     }
 
