@@ -20,7 +20,7 @@ class TouchFunction extends BaseFunction
                 '/touch_(' . ($tableTo ?? '[a-z_]+') . ')__(' . ($columnTo ?? '[a-z_]+') . ')_from_(' . ($tableFrom ?? '[a-z_]+') . ')__(' . ($columnFrom ?? '[a-z_]+') . ')/',
                 $name,
                 $matches
-            ) !== false) {
+            ) > 0) {
             $tableTo = $matches[1];
             $columnTo = $matches[2];
             $tableFrom = $matches[3];
@@ -69,6 +69,9 @@ class TouchFunction extends BaseFunction
             ) as $raw
         ) {
             [, $tableTo, $columnFrom, $columnTo] = static::decompileName($raw->proname, tableFrom: $tableFrom, columnFrom: $columnFrom);
+            if(is_null($tableTo)) {
+                continue;
+            }
             $function = new static($tableFrom, $tableTo, $columnFrom, $columnTo);
             $function->name = $raw->proname;
             $functions[] = $function;
