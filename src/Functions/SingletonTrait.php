@@ -1,16 +1,14 @@
 <?php
 
-
 namespace Umbrellio\Postgres\Functions;
 
-
-abstract class BaseCommonFunction extends BaseFunction
+trait SingletonTrait
 {
     public static function getInstance(): static
     {
         static $self;
 
-        if (! isset($self)) {
+        if (!isset($self)) {
             $self = new static();
         }
 

@@ -4,8 +4,10 @@
 namespace Umbrellio\Postgres\Functions;
 
 
-class OnDeleteFunction extends BaseCommonFunction
+class OnDeleteFunction extends BaseFunction
 {
+    use SingletonTrait;
+
     public const NAME = 'on_delete';
 
     public function getBody(): string

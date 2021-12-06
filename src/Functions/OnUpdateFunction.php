@@ -4,8 +4,10 @@
 namespace Umbrellio\Postgres\Functions;
 
 
-class OnUpdateFunction extends BaseCommonFunction
+class OnUpdateFunction extends BaseFunction
 {
+    use SingletonTrait;
+
     public const NAME = 'on_update';
 
     public function getBody(): string

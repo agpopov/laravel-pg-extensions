@@ -4,8 +4,10 @@
 namespace Umbrellio\Postgres\Functions;
 
 
-class OnInsertFunction extends BaseCommonFunction
+class OnInsertFunction extends BaseFunction
 {
+    use SingletonTrait;
+
     public const NAME = 'on_insert';
 
     public function getBody(): string

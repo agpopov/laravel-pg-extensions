@@ -6,8 +6,10 @@ namespace Umbrellio\Postgres\Functions;
 
 use JetBrains\PhpStorm\Pure;
 
-class JsonToArrayFunction extends BaseCommonFunction
+class JsonToArrayFunction extends BaseFunction
 {
+    use SingletonTrait;
+
     public const NAME = 'json_to_array';
 
     #[Pure] public function compile(): string
