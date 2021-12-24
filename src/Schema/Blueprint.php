@@ -12,6 +12,7 @@ use Illuminate\Database\Schema\Grammars\Grammar;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Fluent;
+use InvalidArgumentException;
 use Umbrellio\Postgres\Schema\Builders\Constraints\Check\CheckBuilder;
 use Umbrellio\Postgres\Schema\Builders\Constraints\Exclude\ExcludeBuilder;
 use Umbrellio\Postgres\Schema\Builders\Indexes\Index\IndexBuilder;
@@ -89,13 +90,13 @@ class Blueprint extends BaseBlueprint
         }
         if ($columns['created_by']) {
             $column = $this->uuid('created_by');
-            if (! $areUserColumnsRequired) {
+            if (!$areUserColumnsRequired) {
                 $column->nullable();
             }
         }
         if ($columns['updated_by']) {
             $column = $this->uuid('updated_by');
-            if (! $areUserColumnsRequired) {
+            if (!$areUserColumnsRequired) {
                 $column->nullable();
             }
         }
@@ -175,7 +176,7 @@ class Blueprint extends BaseBlueprint
      */
     public function uniquePartial(array|string $columns, ?string $index = null, ?string $algorithm = null): Fluent
     {
-        $columns = (array)$columns;
+        $columns = (array) $columns;
 
         $index = $index ?: $this->createIndexName('unique', $columns);
 
@@ -191,7 +192,7 @@ class Blueprint extends BaseBlueprint
      */
     public function indexPartial(array|string $columns, ?string $index = null, ?string $algorithm = null): Fluent
     {
-        $columns = (array)$columns;
+        $columns = (array) $columns;
 
         $index = $index ?: $this->createIndexName('index', $columns);
 
@@ -208,13 +209,13 @@ class Blueprint extends BaseBlueprint
     }
 
     /**
-     * @param array|string $columns
+     * @param  array|string  $columns
      *
      * @return ExcludeDefinition|ExcludeBuilder
      */
     public function exclude($columns, ?string $index = null): Fluent
     {
-        $columns = (array)$columns;
+        $columns = (array) $columns;
 
         $index = $index ?: $this->createIndexName('excl', $columns);
 
@@ -222,13 +223,13 @@ class Blueprint extends BaseBlueprint
     }
 
     /**
-     * @param array|string $columns
+     * @param  array|string  $columns
      *
      * @return CheckDefinition|CheckBuilder
      */
     public function check($columns, ?string $index = null): Fluent
     {
-        $columns = (array)$columns;
+        $columns = (array) $columns;
 
         $index = $index ?: $this->createIndexName('chk', $columns);
 
@@ -321,8 +322,14 @@ class Blueprint extends BaseBlueprint
         return $this->addCommand('dropImmutable', compact('column'));
     }
 
-    public function enum($column, array $allowed): Fluent
+    public function enum($column, array|string $allowed): Fluent
     {
+        if (is_string($allowed) && function_exists('enum_exists') && enum_exists($allowed)) {
+            $allowed = array_map(fn($enum) => $enum->value, $allowed::cases());
+        }
+        if (!is_array($allowed)) {
+            throw new InvalidArgumentException("Argument 'allowed' must be an array or enum");
+        }
         $this->addType('enum', compact('column', 'allowed'));
         return $this->addColumn('enum', $column, ['allowed' => $allowed, 'blueprint' => $this]);
     }
@@ -348,7 +355,7 @@ class Blueprint extends BaseBlueprint
         parent::addImpliedCommands($grammar);
 
         foreach ($this->getTypeCommands() as $command) {
-            if (! PostgresEnumType::getInstance($this->getTable(), $command->get('column'))->exists()) {
+            if (!PostgresEnumType::getInstance($this->getTable(), $command->get('column'))->exists()) {
                 array_unshift($this->commands, $command);
             }
         }

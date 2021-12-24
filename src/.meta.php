@@ -35,6 +35,7 @@ namespace Illuminate\Database\Schema {
      * @method ViewDefinition createView(string $view, string $select, bool $materialize = false)
      * @method ViewDefinition createRecursiveView(string $view, array $columns, string $select, bool $materialize = false)
      * @method Fluent dropView(string $view)
+     * @method ColumnDefinition enum(string $column, array|string $allowed)
      * @method ColumnDefinition numeric(string $column, ?int $precision = null, ?int $scale = null)
      * @method ColumnDefinition tsrange(string $column)
      * @method ColumnDefinition array(string $column, string $type)
