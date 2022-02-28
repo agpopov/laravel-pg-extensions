@@ -7,7 +7,9 @@ namespace Umbrellio\Postgres;
 use DateTimeInterface;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Events;
+use Illuminate\Database\Grammar;
 use Illuminate\Database\PostgresConnection as BasePostgresConnection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Traits\Macroable;
 use PDO;
 use Umbrellio\Postgres\Extensions\AbstractExtension;
@@ -29,7 +31,7 @@ class PostgresConnection extends BasePostgresConnection
 {
     use Macroable;
 
-    public $name;
+    public string $name;
 
     private static array $extensions = [];
 
@@ -46,7 +48,6 @@ class PostgresConnection extends BasePostgresConnection
     ];
 
     /**
-     * @param AbstractExtension|string $extension
      * @throws ExtensionInvalidException
      * @codeCoverageIgnore
      */
@@ -85,24 +86,17 @@ class PostgresConnection extends BasePostgresConnection
         return $doctrineConnection;
     }
 
-    public function bindValues($statement, $bindings)
+    public function bindValues($statement, $bindings): void
     {
         if ($this->getPdo()->getAttribute(PDO::ATTR_EMULATE_PREPARES)) {
             foreach ($bindings as $key => $value) {
                 $parameter = is_string($key) ? $key : $key + 1;
 
-                switch (true) {
-                    case is_bool($value):
-                        $dataType = PDO::PARAM_BOOL;
-                        break;
-
-                    case $value === null:
-                        $dataType = PDO::PARAM_NULL;
-                        break;
-
-                    default:
-                        $dataType = PDO::PARAM_STR;
-                }
+                $dataType = match (true) {
+                    is_bool($value) => PDO::PARAM_BOOL,
+                    $value === null => PDO::PARAM_NULL,
+                    default => PDO::PARAM_STR,
+                };
 
                 $statement->bindValue($parameter, $value, $dataType);
             }
@@ -111,7 +105,7 @@ class PostgresConnection extends BasePostgresConnection
         }
     }
 
-    public function prepareBindings(array $bindings)
+    public function prepareBindings(array $bindings): array
     {
         if ($this->getPdo()->getAttribute(PDO::ATTR_EMULATE_PREPARES)) {
             $grammar = $this->getQueryGrammar();
@@ -128,7 +122,7 @@ class PostgresConnection extends BasePostgresConnection
         return parent::prepareBindings($bindings);
     }
 
-    protected function getDefaultSchemaGrammar()
+    protected function getDefaultSchemaGrammar(): Grammar|PostgresGrammar
     {
         return $this->withTablePrefix(new PostgresGrammar());
     }
@@ -136,9 +130,7 @@ class PostgresConnection extends BasePostgresConnection
     private function registerInitialTypes(): void
     {
         foreach ($this->initialTypes as $type => $typeClass) {
-            $this
-                ->getSchemaBuilder()
-                ->registerCustomDoctrineType($typeClass, $type, $type);
+            DB::registerDoctrineType($typeClass, $type, $type);
         }
     }
 
@@ -151,9 +143,7 @@ class PostgresConnection extends BasePostgresConnection
             /** @var AbstractExtension $extension */
             $extension::register();
             foreach ($extension::getTypes() as $type => $typeClass) {
-                $this
-                    ->getSchemaBuilder()
-                    ->registerCustomDoctrineType($typeClass, $type, $type);
+                DB::registerDoctrineType($typeClass, $type, $type);
             }
         });
     }

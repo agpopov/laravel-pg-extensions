@@ -6,6 +6,7 @@ namespace Umbrellio\Postgres\Schema;
 
 use Closure;
 use Illuminate\Database\Schema\PostgresBuilder as BasePostgresBuilder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Traits\Macroable;
 use Umbrellio\Postgres\Compilers\ImmutableCompiler;
 use Umbrellio\Postgres\Compilers\TouchCompiler;
@@ -19,15 +20,15 @@ class Builder extends BasePostgresBuilder
 {
     use Macroable;
 
-    public $name;
+    public string $name;
 
     public function table($table, Closure $callback)
     {
         foreach (PostgresEnumType::getAll($table) as $type) {
-            $this->connection->getSchemaBuilder()->registerCustomDoctrineType($type->getClassName(), $type->getName(), $type->getName());
+            DB::registerDoctrineType($type->getClassName(), $type->getName(), $type->getName());
             $array = clone $type;
             $array->setName('_' . $array->getName());
-            $this->connection->getSchemaBuilder()->registerCustomDoctrineType($array->getClassName(), $array->getName(), $array->getName());
+            DB::registerDoctrineType($array->getClassName(), $array->getName(), $array->getName());
         }
 
         parent::table($table, $callback);
